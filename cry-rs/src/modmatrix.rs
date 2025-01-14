@@ -1,6 +1,6 @@
 use std::usize;
 
-pub fn roundkeys(mut matrix: [[u128; 5]; 5], key: [u128; 2500]) -> [[u128; 5]; 5] {
+pub fn roundkeys<'a>(matrix: &'a mut [[u128; 5]; 5], key: &[u128; 2500]) -> &'a mut [[u128; 5]; 5] {
     let mut keyc: usize = 0;
     for i in 0..5 {
         for j in 0..5 {
@@ -8,7 +8,7 @@ pub fn roundkeys(mut matrix: [[u128; 5]; 5], key: [u128; 2500]) -> [[u128; 5]; 5
             keyc += 1;
         }
     }
-    return matrix;
+    matrix
 }
 
 pub fn transpose(matrix: [[u128; 5]; 5]) -> [[u128; 5]; 5] {
@@ -21,14 +21,14 @@ pub fn transpose(matrix: [[u128; 5]; 5]) -> [[u128; 5]; 5] {
     return newmatrix;
 }
 
-pub fn gen_martix_variation(matrix: [[u128; 5]; 5], key: [u128; 2500]) -> [[u128; 5]; 5] {
-    let mut matrix = roundkeys(matrix, key);
+pub fn gen_matrix_variation(mut matrix: [[u128; 5]; 5], key: &[u128; 2500]) -> [[u128; 5]; 5] {
+    roundkeys(&mut matrix, key);
     matrix = transpose(matrix);
-    return matrix;
+    matrix
 }
 
-pub fn undochanges(matrix: [[u128; 5]; 5], key: [u128; 2500]) -> [[u128; 5]; 5] {
-    let mut matrix = transpose(matrix);
-    matrix = roundkeys(matrix, key);
-    return matrix;
+pub fn undochanges(mut matrix: [[u128; 5]; 5], key: &[u128; 2500]) -> [[u128; 5]; 5] {
+    matrix = transpose(matrix);
+    roundkeys(&mut matrix, key);
+    matrix
 }

@@ -21,7 +21,7 @@ pub fn gen_solution() -> u128 {
     f.read_exact(&mut buffer)
         .expect("Cannot read from random source");
 
-    return 10000000 + (u128::from_le_bytes(buffer) % 40000000);
+    return 10000000 + (u128::from_le_bytes(buffer) % 4000000);
 }
 
 fn expand(exp_key: &[u128; 2500], index: usize) -> u128 {
@@ -31,7 +31,7 @@ fn expand(exp_key: &[u128; 2500], index: usize) -> u128 {
         out = ((100000 + (out % 234)) ^ t) + (out ^ t).pow(((out as f64).cos()).round() as u32);
     }
 
-    out ^ 0xFF
+    out ^ (0xFF as f64).powf((out as f64).sin().round()) as u128
 }
 
 pub fn expand_key(key: [u128; 25]) -> [u128; 2500] {
