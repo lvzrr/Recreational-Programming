@@ -30,8 +30,7 @@ fn expand(exp_key: &[u128; 2500], index: usize) -> u128 {
         let t = exp_key[i] % 100000000000000;
         out = ((100000 + (out % 234)) ^ t) + (out ^ t).pow(((out as f64).cos()).round() as u32);
     }
-
-    out ^ (0xFF as f64).powf((out as f64).sin().round()) as u128
+    out ^ (u128::MAX as f64).powf((out as f64).sin().round()) as u128
 }
 
 pub fn expand_key(key: [u128; 25]) -> [u128; 2500] {
