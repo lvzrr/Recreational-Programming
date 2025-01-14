@@ -133,8 +133,13 @@ pub fn runserver() {
 
     for stream in listener.incoming() {
         let s: TcpStream = stream.expect("Error accepting connection");
-        println!("New connection: {}", s.peer_addr().unwrap());
-        thread::spawn(move || handleclient(&s));
+        if !(stop_signal.load(Ordering::Relaxed)) {
+            println!("New connection: {}", s.peer_addr().unwrap());
+            thread::spawn(move || handleclient(&s));
+        } else {
+            s.shutdown(std::net::Shutdown::Both)
+                .expect("Error shutting down stream");
+        }
     }
 
     ctrlc::set_handler(move || {
