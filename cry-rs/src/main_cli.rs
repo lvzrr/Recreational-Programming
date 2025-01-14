@@ -1,10 +1,10 @@
+mod client;
 mod keygen;
 mod matrixopts;
 mod modmatrix;
-mod server;
 
-use server::runserver;
+use client::runclient;
 
 fn main() {
-    runserver();
+    runclient();
 }
