@@ -3,4 +3,23 @@ name = "cry-rs"
 version = "0.1.0"
 edition = "2021"
 
+
+[profile.dev]
+opt-level = 3
+debug = false
+split-debuginfo = 'packed'
+panic = 'abort'
+lto = true
+codegen-units = 1
+incremental = false
+
+[profile.release]
+opt-level = 3
+debug = false
+split-debuginfo = 'packed'
+panic = 'abort'
+lto = true
+codegen-units = 1
+incremental = false
+
 [dependencies]

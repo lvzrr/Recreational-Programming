@@ -14,6 +14,16 @@ pub fn gen_key() -> [u128; 25] {
     key
 }
 
+pub fn gen_solution() -> u128 {
+    let mut f = File::open("/dev/urandom").expect("Cannot read from random source");
+
+    let mut buffer: [u8; 16] = [0; 16];
+    f.read_exact(&mut buffer)
+        .expect("Cannot read from random source");
+
+    return 10000000 + (u128::from_le_bytes(buffer) % 40000000);
+}
+
 fn expand(exp_key: &[u128; 2500], index: usize) -> u128 {
     let mut out: u128 = 10;
     for i in (index - 10..index - 1).rev() {
