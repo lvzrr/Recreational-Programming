@@ -162,6 +162,17 @@ pub fn runserver() {
 }
 
 fn handleclient(mut stream: &TcpStream) -> Result<(), std::io::Error> {
+    if auth(&stream).is_err() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Client provided an incorrect solution",
+        ));
+    }
+
+    Ok(())
+}
+
+fn auth(mut stream: &TcpStream) -> Result<(), std::io::Error> {
     println!("Handling client");
     let solution: u128 = gen_solution();
     println!("Solution generated: {}", solution);
@@ -190,6 +201,7 @@ fn handleclient(mut stream: &TcpStream) -> Result<(), std::io::Error> {
             match stream.read_exact(&mut buffer) {
                 Ok(_) => {
                     matrix[i][j] = (&buffer[..]).read_u128::<BigEndian>()?;
+                    println!("Received: {}", matrix[i][j]);
                 }
                 Err(e) => {
                     eprintln!("Error reading from client: {}", e);
@@ -203,10 +215,14 @@ fn handleclient(mut stream: &TcpStream) -> Result<(), std::io::Error> {
 
     if (solution - (solution % 100)) == solvematrix(&matrix) {
         stream.write_all(&(u128::MAX ^ (solution + (solution / 3))).to_be_bytes())?;
+        println!("Client provided a correct solution");
+        Ok(())
     } else {
         eprintln!("Client provided an incorrect solution");
         let _ = stream.shutdown(std::net::Shutdown::Both);
+        Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Client provided an incorrect solution",
+        ))
     }
-
-    Ok(())
 }

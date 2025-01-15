@@ -1,6 +1,8 @@
+use crate::crypt::*;
 use crate::keygen::*;
 use crate::matrixopts::*;
 use crate::modmatrix::*;
+use std::default;
 use std::io::stdin;
 use std::io::Read;
 use std::io::Write;
@@ -10,9 +12,11 @@ use std::u128;
 pub fn runclient() {
     print!("Enter the server IP address: ");
     let mut input: String = String::new();
+    std::io::stdout().flush().expect("Error flushing stdout");
     stdin()
         .read_line(&mut input)
         .expect("Error reading server IP address");
+
     let serv_ip: IpAddr = input.trim().parse().expect("Error parsing IP address");
 
     let port: u16 = 8888;
@@ -24,6 +28,23 @@ pub fn runclient() {
 
     println!("Connected to server");
 
+    if auth(&s) == 1 {
+        ()
+    }
+
+    let mut hostname: String = String::new();
+    print!("Enter your username: ");
+    std::io::stdout().flush().expect("Error flushing stdout");
+    stdin()
+        .read_line(&mut hostname)
+        .expect("Error reading username");
+
+    s.shutdown(std::net::Shutdown::Both)
+        .expect("Error shutting down connection");
+    ()
+}
+
+fn auth(mut s: &TcpStream) -> u8 {
     let mut key: [u128; 25] = [0; 25];
 
     for i in 0..25 {
@@ -75,17 +96,11 @@ pub fn runclient() {
 
     authresult = u128::from_be_bytes(buffer);
 
-    if (authresult ^ u128::MAX) == solution + (solution / 3) {
-        println!("Authentication successful");
+    if authresult ^ u128::MAX == solution + (solution / 3) {
+        1
     } else {
-        println!("Authentication failed");
-
         s.shutdown(std::net::Shutdown::Both)
             .expect("Error shutting down connection");
-        ()
+        0
     }
-
-    s.shutdown(std::net::Shutdown::Both)
-        .expect("Error shutting down connection");
-    ()
 }

@@ -1,3 +1,4 @@
+mod crypt;
 mod keygen;
 mod lang;
 mod matrixopts;

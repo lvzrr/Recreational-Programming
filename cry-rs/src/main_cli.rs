@@ -1,4 +1,5 @@
 mod client;
+mod crypt;
 mod keygen;
 mod matrixopts;
 mod modmatrix;
