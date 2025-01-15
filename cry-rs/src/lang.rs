@@ -1,4 +1,4 @@
-enum Comm_Type {
+pub enum Comm_Type {
     FileGet,
     ImageGet,
     FilePush,
@@ -7,20 +7,10 @@ enum Comm_Type {
     MessagePush,
 }
 
-struct push_msg_packet {
-    padding1: u128,
-    sender_id: [u8; 254],
-    receiver_id: [u8; 254],
-    data: String,
-    challenge: [[u128; 5]; 5],
-    key_iv: [u128; 25],
-}
-
-struct get_msg_packet {
-    padding1: u128,
-    sender_id: [u8; 254],
-    receiver_id: [u8; 254],
-    data: String,
-    challenge: [[u128; 5]; 5],
-    key_iv: [u128; 25],
+pub struct MsgPacket {
+    pub padding1: u128,
+    pub sender_id: u128,
+    pub receiver_id: u128,
+    pub data: String,
+    pub key_iv: [u128; 15],
 }

@@ -41,3 +41,19 @@ pub fn expand_key(key: [u128; 25]) -> [u128; 2500] {
     }
     expanded_key
 }
+
+pub fn expand_key_msg(exp_key: &[u128; 15], index: usize) -> [u128; 256] {
+    let mut buf_out: [u128; 256] = [0; 256];
+    let mut out: u128 = 10;
+
+    for j in 0..256 {
+        for i in (index - 10..index - 1).rev() {
+            let t = exp_key[i] % 100000000000000;
+            out =
+                ((1000000 + (out % 5321)) ^ t) + (out ^ t).pow(((out as f64).cos()).round() as u32);
+        }
+        buf_out[j] = (out ^ (u128::MAX as f64).powf((out as f64).sin().round()) as u128)
+            ^ out.to_le_bytes()[j % 16] as u128;
+    }
+    buf_out
+}

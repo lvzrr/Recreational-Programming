@@ -1,3 +1,4 @@
+use crate::data::overseer;
 use crate::keygen::*;
 use crate::lang::*;
 use crate::matrixopts::*;
@@ -6,19 +7,17 @@ use byteorder::{BigEndian, ReadBytesExt};
 use local_ip_address::local_ip;
 use std::io::Read;
 use std::io::Write;
+use std::sync::{Arc, Mutex};
 use std::u128;
+use std::usize;
 use std::{
     net::{IpAddr, SocketAddr, TcpListener, TcpStream},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::atomic::{AtomicBool, Ordering},
     thread,
 };
 
 pub fn runserver() {
     let ip: IpAddr = local_ip().expect("Error retrieving local IP address");
-
     let port: u16 = 8888;
     let socket: SocketAddr = SocketAddr::new(ip, port);
 
@@ -27,42 +26,79 @@ pub fn runserver() {
     let stop_signal = Arc::new(AtomicBool::new(false));
 
     let listener = TcpListener::bind(socket).expect("Error binding to socket");
+    listener
+        .set_nonblocking(true)
+        .expect("Error setting non-blocking mode");
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(s) => {
-                if !stop_signal.load(Ordering::Relaxed) {
-                    println!(
-                        "New connection: {}",
-                        s.peer_addr().map_or_else(
-                            |_| "Unknown address".to_string(),
-                            |addr| addr.to_string()
-                        )
+    let msg_buf: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    let key_buf: Arc<Mutex<Vec<[u128; 15]>>> = Arc::new(Mutex::new(Vec::new()));
+    let msgc: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
+
+    let stop_signal_clone = stop_signal.clone();
+
+    {
+        let msg_buf_clone = Arc::clone(&msg_buf);
+        let key_buf_clone = Arc::clone(&key_buf);
+        let msgc_clone = Arc::clone(&msgc);
+        let stop_signal_clone2 = Arc::clone(&stop_signal);
+
+        thread::spawn(move || {
+            overseer(msgc_clone, msg_buf_clone, key_buf_clone, stop_signal_clone2);
+        });
+    }
+
+    ctrlc::set_handler(move || {
+        println!("Shutdown signal received");
+        stop_signal_clone.store(true, Ordering::Relaxed);
+    })
+    .expect("Error setting Ctrl+C handler");
+
+    loop {
+        match listener.accept() {
+            Ok((stream, addr)) => {
+                if stop_signal.load(Ordering::Relaxed) {
+                    eprintln!(
+                        "Server is shutting down, rejecting new connection from {}",
+                        addr
                     );
+                    let _ = stream.shutdown(std::net::Shutdown::Both);
+                } else {
+                    println!("New connection: {}", addr);
+
+                    let msg_buf_clone = Arc::clone(&msg_buf);
+                    let key_buf_clone = Arc::clone(&key_buf);
+                    let msgc_clone = Arc::clone(&msgc);
+
                     thread::spawn(move || {
-                        if let Err(e) = handleclient(&s) {
-                            eprintln!("Error handling client: {}", e);
+                        if let Err(e) =
+                            handleclient(&stream, &msg_buf_clone, &key_buf_clone, &msgc_clone)
+                        {
+                            eprintln!("Error handling client {}: {}", addr, e);
                         }
                     });
-                } else {
-                    eprintln!("Server is shutting down, rejecting new connection");
-                    let _ = s.shutdown(std::net::Shutdown::Both);
                 }
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                thread::sleep(std::time::Duration::from_millis(100));
             }
             Err(e) => {
                 eprintln!("Error accepting connection: {}", e);
             }
         }
-    }
 
-    ctrlc::set_handler(move || {
-        println!("Shutdown signal received");
-        stop_signal.store(true, Ordering::Relaxed);
-    })
-    .expect("Error setting Ctrl+C handler");
+        if stop_signal.load(Ordering::Relaxed) {
+            println!("Shutting down server...");
+            break;
+        }
+    }
 }
 
-fn handleclient(mut stream: &TcpStream) -> Result<(), std::io::Error> {
+fn handleclient(
+    mut stream: &TcpStream,
+    msg_buf: &Arc<Mutex<Vec<String>>>,
+    key_buf: &Arc<Mutex<Vec<[u128; 15]>>>,
+    msgc: &Arc<Mutex<usize>>,
+) -> Result<(), std::io::Error> {
     if auth(&stream).is_err() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
@@ -86,6 +122,10 @@ fn handleclient(mut stream: &TcpStream) -> Result<(), std::io::Error> {
     let id: u128 = ((&idbuf[..]).read_u128::<BigEndian>().unwrap()) ^ u128::MAX;
 
     println!("Client logged as [{}]", id);
+
+    let mut msg_buf_lock = msg_buf.lock().unwrap();
+    let mut key_buf_lock = key_buf.lock().unwrap();
+    let mut msgc_lock = msgc.lock().unwrap();
 
     Ok(())
 }
