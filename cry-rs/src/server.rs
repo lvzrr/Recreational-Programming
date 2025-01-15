@@ -4,24 +4,20 @@ use crate::matrixopts::*;
 use crate::modmatrix::*;
 use byteorder::{BigEndian, ReadBytesExt};
 use local_ip_address::local_ip;
-use pnet::{datalink, ipnetwork::IpNetwork};
 use std::io::Read;
 use std::io::Write;
 use std::u128;
 use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream, UdpSocket},
+    net::{IpAddr, SocketAddr, TcpListener, TcpStream},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
     thread,
-    time::Duration,
 };
 
-// Todo: username handling, implement writing methods and that shiii
-
 pub fn runserver() {
-    let ip = local_ip().expect("Error retrieving local IP address");
+    let ip: IpAddr = local_ip().expect("Error retrieving local IP address");
 
     let port: u16 = 8888;
     let socket: SocketAddr = SocketAddr::new(ip, port);
@@ -78,7 +74,11 @@ fn handleclient(mut stream: &TcpStream) -> Result<(), std::io::Error> {
     stream.read_exact(&mut idbuf).unwrap_or_else(|e| {
         eprintln!("Error reading from client: {}", e);
         stream.shutdown(std::net::Shutdown::Both).unwrap();
-        ()
+        Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Error while Auth",
+        ))
+        .unwrap()
     });
 
     idbuf.reverse();
