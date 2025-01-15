@@ -13,6 +13,7 @@ struct push_msg_packet {
     receiver_id: [u8; 254],
     data: String,
     challenge: [[u128; 5]; 5],
+    key_iv: [u128; 25],
 }
 
 struct get_msg_packet {
@@ -21,4 +22,5 @@ struct get_msg_packet {
     receiver_id: [u8; 254],
     data: String,
     challenge: [[u128; 5]; 5],
+    key_iv: [u128; 25],
 }
